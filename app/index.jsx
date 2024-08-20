@@ -40,9 +40,6 @@ export default function App() {
       <StatusBar style="auto" />
       <Link href="/boards" style={{ color: 'blue'}}>Go to Boards</Link>
     </View>
-    // <View style={{ flex: 1 }}>
-    //   {session ? <Boards /> : <SignIn />}
-    // </View>
   );
 }
 
