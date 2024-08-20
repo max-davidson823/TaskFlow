@@ -1,3 +1,4 @@
+// _layout.jsx
 import { View, Image, Text } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 
