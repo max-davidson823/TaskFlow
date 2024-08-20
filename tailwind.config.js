@@ -3,24 +3,14 @@ module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
     "./components/**/*.{js,jsx,ts,tsx}",
+    "./pages/**/*.{js,jsx,ts,tsx}",
+    "./layouts/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        primary: "#0D0D2A",
-        secondary: {
-          DEFAULT: "#FE8E05",
-          100: "#FF9001",
-          200: "#FF8E01",
-        },
-        black: {
-          DEFAULT: "#000",
-          100: "#FED59D",
-          200: "#FE1C07",
-        },
-        gray: {
-          100: "#CDCDE0",
-        },
+        primary: "#FFFFFF",
+        secondary: "#FFFFFF",
       },
       fontFamily: {
         pthin: ["Poppins-Thin", "sans-serif"],
