@@ -6,6 +6,33 @@
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
+// App Theme
+// #F2163E
+// #F27507
+// #F25D07
+// #F21905
+// #0D0D0D
+// #F2EBDC
+// #FAD9A5
+// #400922
+// #8C0714
+// #FB991D
+// #EE1B1C
+// #FA6D08
+// #B60E16
+// #F84307
+// #7C8C9C
+// #6C848C
+// #EA234C
+
+// List
+// fad8a4, 400922, 8c0814, fb991c, ef1f1a, fa6d08, b60e16, e71d44, 74848c, 8c9c9c
+// #fad8a4, #400922, #8c0814, #fb991c, #ef1f1a, #fa6d08, #b60e16, #e71d44, #74848c, #8c9c9c
+
+//#F2163E
+//#FB991D
+//#B60E16
+//#F84307
 export const Colors = {
   light: {
     text: '#11181C',
