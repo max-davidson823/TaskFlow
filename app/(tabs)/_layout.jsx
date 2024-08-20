@@ -1,22 +1,24 @@
-import React from 'react';
-import { View, Image } from 'react-native';
-import { Tabs } from 'expo-router';
+import { View, Image, Text } from 'react-native';
+import { Tabs, Redirect } from 'expo-router';
 
 // Import the image
 import homeIcon from '../../assets/icons/home.png';
+import checkIcon from '../../assets/icons/check.png';
+import calendarIcon from '../../assets/icons/calendar.png';
+import profileIcon from '../../assets/icons/profile.png';
 
-const TabIcon = ({ icon, color, focused }) => {
+const TabIcon = ({ icon, color, name, focused }) => {
   return (
-    <View>
+    <View className="items-center justify-center gap-1">
       <Image
         source={icon}
-        style={{ 
-          width: 24, 
-          height: 24, 
-          ...(focused ? { tintColor: color } : {}) // Apply tintColor only when focused
-        }}
         resizeMode="contain"
+        style={{ tintColor: color }}
+        className="w-6 h-6"
       />
+      <Text className={`${focused ? 'font-semibold' : 'font-regular'} text-xs`}>
+        {name}
+      </Text>
     </View>
   );
 }
@@ -24,7 +26,18 @@ const TabIcon = ({ icon, color, focused }) => {
 const TabsLayout = () => {
   return (
     <>
-      <Tabs>
+      <Tabs
+        screenOptions={{
+          tabBarShowLabel: false,
+          tabBarActiveTintColor: null,
+          tabBarInactiveTintColor: 'gray',
+          tabBarStyle: {
+            backgroundColor: 'white',
+            borderTopWidth: 0,
+            elevation: 0,
+          },
+        }}
+      >
         <Tabs.Screen
           name="boards"
           options={{
@@ -34,7 +47,52 @@ const TabsLayout = () => {
               <TabIcon 
                 icon={homeIcon} 
                 color={color} 
-                name="boards" 
+                name="Boards" 
+                focused={focused} 
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="todo"
+          options={{
+            title: 'Todo',
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon 
+                icon={checkIcon} 
+                color={color} 
+                name="To-Do" 
+                focused={focused} 
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: 'Calendar',
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon 
+                icon={calendarIcon} 
+                color={color} 
+                name="Calendar" 
+                focused={focused} 
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon 
+                icon={profileIcon} 
+                color={color} 
+                name="Profile" 
                 focused={focused} 
               />
             ),
