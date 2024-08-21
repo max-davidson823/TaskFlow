@@ -1,3 +1,4 @@
+// columns.jsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';

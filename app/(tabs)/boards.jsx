@@ -1,3 +1,4 @@
+// boards.jsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
