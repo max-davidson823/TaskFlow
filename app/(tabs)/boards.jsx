@@ -68,9 +68,9 @@ export default function Boards() {
   }
 
   function navigateToColumns(boardId) {
-    router.push({ pathname: '/columns', params: { boardId } });
+    router.push(`/(columns)/columns?boardId=${boardId}`);
   }
-
+      
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => setModalVisible(true)}>

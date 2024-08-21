@@ -6,6 +6,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function columns() {
   const router = useRouter();
+  console.log('Router:', router);
   const { boardId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [columns, setColumns] = useState([]);
@@ -13,7 +14,17 @@ export default function columns() {
   const [editingColumnId, setEditingColumnId] = useState(null);
   const [editedColumnName, setEditedColumnName] = useState('');
 
+  console.log('useLocalSearchParams:', useLocalSearchParams());
+  console.log('Received boardId:', boardId);
+
   useEffect(() => {
+    console.log('Received boardId:', boardId);
+  
+    if (!boardId) {
+      console.error('No boardId received');
+      return;
+    }
+  
     getColumns(boardId);
   }, [boardId]);
 
@@ -26,7 +37,16 @@ export default function columns() {
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching columns:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.error('No column data received');
+        return;
+      }
+
       setColumns(data);
     } catch (error) {
       Alert.alert('Loading columns failed', error.message);
