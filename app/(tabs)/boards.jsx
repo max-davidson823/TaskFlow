@@ -5,7 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function Boards() {
     const router = useRouter();
-    const { session } = useLocalSearchParams(); // This extracts the session from params
+    const { session } = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
     const [boards, setBoards] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
@@ -43,7 +43,7 @@ export default function Boards() {
                 .delete()
                 .eq('id', id);
             if (error) throw error;
-            getBoards(JSON.parse(session).user.id); // Refresh the board list after deletion
+            getBoards(JSON.parse(session).user.id);
         } catch (error) {
             Alert.alert('Error deleting board', error.message);
         }
@@ -59,8 +59,8 @@ export default function Boards() {
                 .from('boards')
                 .insert([{ name: newBoardName, description: newBoardDescription, user_id: JSON.parse(session).user.id }]);
             if (error) throw error;
-            setModalVisible(false); // Close modal after adding
-            getBoards(JSON.parse(session).user.id); // Refresh the board list
+            setModalVisible(false);
+            getBoards(JSON.parse(session).user.id);
         } catch (error) {
             Alert.alert('Error adding board', error.message);
         }
