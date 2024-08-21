@@ -66,6 +66,10 @@ export default function Boards() {
     }
   }
 
+  function navigateToColumns(boardId) {
+    router.push({ pathname: '/columns', params: { boardId } });
+  }
+
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => setModalVisible(true)}>
@@ -97,12 +101,16 @@ export default function Boards() {
       )}
       <View style={styles.boardList}>
         {boards.map((board) => (
-          <View key={board.id} style={styles.boardItem}>
+          <TouchableOpacity
+            key={board.id}
+            style={styles.boardItem}
+            onPress={() => navigateToColumns(board.id)}
+          >
             <Text>{board.name}</Text>
             <TouchableOpacity onPress={() => deleteBoard(board.id)}>
               <Text style={styles.buttonText}>Delete</Text>
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
     </View>
