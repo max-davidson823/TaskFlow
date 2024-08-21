@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function Boards({ session }) {
+export default function Boards() {
+    const router = useRouter();
+    const { session } = useLocalSearchParams(); // This extracts the session from params
     const [loading, setLoading] = useState(true);
     const [boards, setBoards] = useState([]);
     const [modalVisible, setModalVisible] = useState(false);
@@ -10,16 +13,19 @@ export default function Boards({ session }) {
     const [newBoardDescription, setNewBoardDescription] = useState('');
 
     useEffect(() => {
-        if (session) getBoards();
+        if (session) {
+            const parsedSession = JSON.parse(session);
+            getBoards(parsedSession.user.id);
+        }
     }, [session]);
 
-    async function getBoards() {
+    async function getBoards(userId) {
         try {
             setLoading(true);
             const { data, error } = await supabase
                 .from('boards')
                 .select('id, name')
-                .eq('user_id', session?.user.id);
+                .eq('user_id', userId);
 
             if (error) throw error;
             setBoards(data);
@@ -29,7 +35,7 @@ export default function Boards({ session }) {
             setLoading(false);
         }
     }
-
+    
     async function deleteBoard(id) {
         try {
             const { error } = await supabase
@@ -37,7 +43,7 @@ export default function Boards({ session }) {
                 .delete()
                 .eq('id', id);
             if (error) throw error;
-            getBoards(); // Refresh the board list after deletion
+            getBoards(JSON.parse(session).user.id); // Refresh the board list after deletion
         } catch (error) {
             Alert.alert('Error deleting board', error.message);
         }
@@ -51,10 +57,10 @@ export default function Boards({ session }) {
         try {
             const { error } = await supabase
                 .from('boards')
-                .insert([{ name: newBoardName, description: newBoardDescription, user_id: session.user.id }]);
+                .insert([{ name: newBoardName, description: newBoardDescription, user_id: JSON.parse(session).user.id }]);
             if (error) throw error;
             setModalVisible(false); // Close modal after adding
-            getBoards(); // Refresh the board list
+            getBoards(JSON.parse(session).user.id); // Refresh the board list
         } catch (error) {
             Alert.alert('Error adding board', error.message);
         }

@@ -1,15 +1,13 @@
-// index.tsx
 import { useState, useEffect } from 'react';
-import { supabase } from './(auth)/lib/supabase'; // Updated path to the new location
-import SignIn from './(auth)/sign_in'; // Updated path for SignIn component
-import Boards from './(tabs)/boards'; // Updated path for Boards component
-import { View, ActivityIndicator, Text } from 'react-native';
+import { supabase } from './(auth)/lib/supabase';
+import { View, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession()
@@ -38,10 +36,13 @@ export default function App() {
     <View className="flex-1 items-center justify-center bg-white">
       <Text className="text-3xl font-pblack">TaskFlow</Text>
       <StatusBar style="auto" />
-      <Link href="/boards" style={{ color: 'blue'}}>Go to Boards</Link>
+      <TouchableOpacity onPress={() => router.push({ pathname: '/boards', params: { session: JSON.stringify(session) } })}>
+        <Text style={{ color: 'blue' }}>Go to Boards</Text>
+      </TouchableOpacity>
     </View>
   );
 }
+
 
 
 // import { useState, useEffect } from 'react';
