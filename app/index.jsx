@@ -26,8 +26,11 @@ export default function App() {
   useEffect(() => {
     if (session) {
       router.replace({ pathname: '/boards', params: { session: JSON.stringify(session) } });
+    } else if (!loading) {
+      // If there's no session and loading is complete, navigate to the sign-in page
+      router.replace({ pathname: '/(auth)/sign_in' });
     }
-  }, [session]);
+  }, [session, loading]);
 
   if (loading) {
     return (
