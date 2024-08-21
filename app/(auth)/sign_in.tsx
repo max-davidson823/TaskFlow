@@ -6,25 +6,35 @@ import { useRouter } from 'expo-router';
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSignIn = async () => {
+  const handleAuth = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      let data, error;
 
-      const session = data?.session;
-
-      if (session) {
-        // Navigate to Boards screen
-        router.replace({ pathname: '/boards', params: { session: JSON.stringify(session) } });
+      if (isSignUp) {
+        // Handle sign up
+        ({ data, error } = await supabase.auth.signUp({ email, password }));
+        if (error) throw error;
+        Alert.alert('Sign-up successful!', 'Please check your email for confirmation.');
       } else {
-        Alert.alert('Sign-in failed', 'No session returned');
+        // Handle sign in
+        ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+        if (error) throw error;
+
+        const session = data?.session;
+        if (session) {
+          // Navigate to Boards screen
+          router.replace({ pathname: '/boards', params: { session: JSON.stringify(session) } });
+        } else {
+          Alert.alert('Sign-in failed', 'No session returned');
+        }
       }
     } catch (error) {
-      Alert.alert('Sign-in failed', (error as Error).message);
+      Alert.alert(isSignUp ? 'Sign-up failed' : 'Sign-in failed', (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -45,8 +55,15 @@ export default function SignIn() {
         value={password}
         onChangeText={setPassword}
       />
-      <TouchableOpacity onPress={handleSignIn} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
+      <TouchableOpacity onPress={handleAuth} disabled={loading}>
+        <Text style={styles.buttonText}>
+          {loading ? (isSignUp ? 'Signing Up...' : 'Signing In...') : (isSignUp ? 'Sign Up' : 'Sign In')}
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)} disabled={loading}>
+        <Text style={styles.toggleText}>
+          {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -68,5 +85,10 @@ const styles = StyleSheet.create({
   buttonText: {
     textAlign: 'center',
     color: 'blue',
+  },
+  toggleText: {
+    marginTop: 20,
+    textAlign: 'center',
+    color: 'gray',
   },
 });
