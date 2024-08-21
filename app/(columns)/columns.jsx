@@ -6,7 +6,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function columns() {
   const router = useRouter();
-  console.log('Router:', router);
   const { boardId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [columns, setColumns] = useState([]);
@@ -14,12 +13,7 @@ export default function columns() {
   const [editingColumnId, setEditingColumnId] = useState(null);
   const [editedColumnName, setEditedColumnName] = useState('');
 
-  console.log('useLocalSearchParams:', useLocalSearchParams());
-  console.log('Received boardId:', boardId);
-
   useEffect(() => {
-    console.log('Received boardId:', boardId);
-  
     if (!boardId) {
       console.error('No boardId received');
       return;

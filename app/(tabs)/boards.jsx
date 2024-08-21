@@ -1,4 +1,3 @@
-// boards.jsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
@@ -70,7 +69,7 @@ export default function Boards() {
   function navigateToColumns(boardId) {
     router.push(`/(columns)/columns?boardId=${boardId}`);
   }
-      
+
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => setModalVisible(true)}>
@@ -102,16 +101,17 @@ export default function Boards() {
       )}
       <View style={styles.boardList}>
         {boards.map((board) => (
-          <TouchableOpacity
-            key={board.id}
-            style={styles.boardItem}
-            onPress={() => navigateToColumns(board.id)}
-          >
-            <Text>{board.name}</Text>
-            <TouchableOpacity onPress={() => deleteBoard(board.id)}>
-              <Text style={styles.buttonText}>Delete</Text>
+          <View key={board.id} style={styles.boardItem}>
+            <TouchableOpacity
+              style={styles.boardItemContent}
+              onPress={() => navigateToColumns(board.id)}
+            >
+              <Text style={styles.boardItemTitle}>{board.name}</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => deleteBoard(board.id)}>
+              <Text style={styles.boardItemDeleteText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         ))}
       </View>
     </View>
@@ -127,36 +127,34 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   boardItem: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.23,
+    shadowRadius: 2.62,
+    elevation: 4,
+    marginBottom: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 10,
   },
-  modalInput: {
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#cccccc',
-    padding: 10,
+  boardItemContent: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  centeredView: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  boardItemTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  modalView: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    boxShadow: '0px 0px 10px rgba(0,0,0,0.1)',
-  },
-  buttonText: {
-    color: 'blue',
+  boardItemDeleteText: {
+    fontSize: 14,
+    color: '#e74c3c',
+    paddingHorizontal: 16,
   },
 });
