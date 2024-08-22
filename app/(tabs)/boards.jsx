@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, FlatList, M
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/Colors';
-import { Feather } from '@expo/vector-icons';
+import Icon from 'react-native-vector-icons/Ionicons'; // Import Icon from react-native-vector-icons
+import CircularMenu from '../../components/CircularMenu';
 
 export default function Boards() {
   const router = useRouter();
@@ -13,6 +14,9 @@ export default function Boards() {
   const [modalVisible, setModalVisible] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [newBoardDescription, setNewBoardDescription] = useState('');
+  const [editBoardId, setEditBoardId] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [selectedBoard, setSelectedBoard] = useState(null);
 
   useEffect(() => {
     if (session) {
@@ -45,27 +49,80 @@ export default function Boards() {
         .delete()
         .eq('id', id);
       if (error) throw error;
+      setModalVisible(false);
+      setEditBoardId(null);
       getBoards(JSON.parse(session).user.id);
     } catch (error) {
       Alert.alert('Error deleting board', error.message);
     }
   }
 
-  async function addBoard() {
+  async function saveBoard() {
     if (!newBoardName.trim() || !newBoardDescription.trim()) {
       Alert.alert('Please enter a board name and description');
       return;
     }
     try {
-      const { error } = await supabase
-        .from('boards')
-        .insert([{ name: newBoardName, description: newBoardDescription, user_id: JSON.parse(session).user.id }]);
-      if (error) throw error;
+      if (editBoardId) {
+        // Update existing board
+        const { error } = await supabase
+          .from('boards')
+          .update({ name: newBoardName, description: newBoardDescription })
+          .eq('id', editBoardId);
+        if (error) throw error;
+      } else {
+        // Add new board
+        const { error } = await supabase
+          .from('boards')
+          .insert([{ name: newBoardName, description: newBoardDescription, user_id: JSON.parse(session).user.id }]);
+        if (error) throw error;
+      }
       setModalVisible(false);
+      setEditBoardId(null);
       getBoards(JSON.parse(session).user.id);
     } catch (error) {
-      Alert.alert('Error adding board', error.message);
+      Alert.alert('Error saving board', error.message);
     }
+  }
+
+  function openCircularMenu(board) {
+    setSelectedBoard(board);
+    setMenuVisible(true);
+  }
+
+  function closeCircularMenu() {
+    setMenuVisible(false);
+    setSelectedBoard(null);
+  }
+
+  function handleEdit() {
+    if (selectedBoard) {
+      setNewBoardName(selectedBoard.name);
+      setNewBoardDescription(selectedBoard.description);
+      setEditBoardId(selectedBoard.id);
+      setModalVisible(true);
+    }
+    closeCircularMenu();
+  }
+
+  function handleDelete() {
+    if (selectedBoard) {
+      Alert.alert(
+        "Delete Board",
+        "Are you sure you want to delete this board?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", onPress: () => deleteBoard(selectedBoard.id) }
+        ]
+      );
+    }
+    closeCircularMenu();
+  }
+  function openEditModal(board) {
+    setNewBoardName(board.name);
+    setNewBoardDescription(board.description);
+    setEditBoardId(board.id);
+    setModalVisible(true);
   }
 
   function navigateToColumns(boardId) {
@@ -74,19 +131,17 @@ export default function Boards() {
 
   const renderBoardItem = ({ item, index }) => {
     const colors = ['#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA'];
-    const icons = ['layout', 'list', 'calendar', 'folder'];
-    
+
     return (
-      <TouchableOpacity
-        style={[styles.boardItem, { backgroundColor: colors[index % colors.length] }]}
-        onPress={() => navigateToColumns(item.id)}
-      >
-        <View style={styles.boardItemContent}>
-          <Feather name={icons[index % icons.length]} size={24} color="#333" style={styles.boardIcon} />
+      <View style={[styles.boardItem, { backgroundColor: colors[index % colors.length] }]}>
+        <TouchableOpacity style={styles.boardItemContent} onPress={() => navigateToColumns(item.id)}>
           <Text style={styles.boardItemTitle}>{item.name}</Text>
           <Text style={styles.boardItemDescription}>{item.description}</Text>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.editIcon} onPress={() => openCircularMenu(item)}>
+          <Icon name="ellipsis-vertical" size={20} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -103,6 +158,13 @@ export default function Boards() {
         contentContainerStyle={styles.boardList}
       />
 
+      <CircularMenu
+        visible={menuVisible}
+        onClose={closeCircularMenu}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+      
       <Modal
         animationType="slide"
         transparent={true}
@@ -125,12 +187,20 @@ export default function Boards() {
               value={newBoardDescription}
               onChangeText={setNewBoardDescription}
             />
-            <TouchableOpacity style={styles.modalButton} onPress={addBoard}>
-              <Text style={styles.modalButtonText}>Submit</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={saveBoard}>
+              <Text style={styles.modalButtonText}>{editBoardId ? 'Update' : 'Submit'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
+            {editBoardId && (
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: 'red' }]}
+                onPress={() => deleteBoard(editBoardId)}
+              >
+                <Text style={styles.modalButtonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Modal>
@@ -164,12 +234,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   boardItemContent: {
     padding: 16,
+    flex: 1,
   },
-  boardIcon: {
-    marginBottom: 8,
+  editIcon: {
+    padding: 16,
   },
   boardItemTitle: {
     fontSize: 18,
@@ -201,7 +275,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
