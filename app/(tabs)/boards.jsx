@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, FlatList, Modal } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '../../constants/Colors';
+import { Feather } from '@expo/vector-icons';
 
 export default function Boards() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function Boards() {
       setLoading(true);
       const { data, error } = await supabase
         .from('boards')
-        .select('id, name')
+        .select('id, name, description')
         .eq('user_id', userId);
 
       if (error) throw error;
@@ -71,12 +72,45 @@ export default function Boards() {
     router.push(`/(columns)/columns?boardId=${boardId}`);
   }
 
+  const renderBoardItem = ({ item, index }) => {
+    const colors = ['#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA'];
+    const icons = ['layout', 'list', 'calendar', 'folder'];
+    
+    return (
+      <TouchableOpacity
+        style={[styles.boardItem, { backgroundColor: colors[index % colors.length] }]}
+        onPress={() => navigateToColumns(item.id)}
+      >
+        <View style={styles.boardItemContent}>
+          <Feather name={icons[index % icons.length]} size={24} color="#333" style={styles.boardIcon} />
+          <Text style={styles.boardItemTitle}>{item.name}</Text>
+          <Text style={styles.boardItemDescription}>{item.description}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}>Add Board</Text>
+      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.addButtonText}>+ Add Board</Text>
       </TouchableOpacity>
-      {modalVisible && (
+      
+      <FlatList
+        data={boards}
+        renderItem={renderBoardItem}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={styles.boardList}
+      />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          setModalVisible(!modalVisible);
+        }}
+      >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
             <TextInput
@@ -91,72 +125,109 @@ export default function Boards() {
               value={newBoardDescription}
               onChangeText={setNewBoardDescription}
             />
-            <TouchableOpacity onPress={addBoard}>
-              <Text style={styles.buttonText}>Submit</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={addBoard}>
+              <Text style={styles.modalButtonText}>Submit</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Cancel</Text>
+            <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
-      )}
-      <View style={styles.boardList}>
-        {boards.map((board) => (
-          <View key={board.id} style={styles.boardItem}>
-            <TouchableOpacity
-              style={styles.boardItemContent}
-              onPress={() => navigateToColumns(board.id)}
-            >
-              <Text style={styles.boardItemTitle}>{board.name}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteBoard(board.id)}>
-              <Text style={styles.boardItemDeleteText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
+    flex: 1,
     padding: 20,
     backgroundColor: Colors.light.background,
   },
+  addButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   boardList: {
-    marginTop: 20,
+    paddingBottom: 20,
   },
   boardItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  boardItemContent: {
+    padding: 16,
+  },
+  boardIcon: {
+    marginBottom: 8,
+  },
+  boardItemTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  boardItemDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  modalView: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 2
     },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
-    marginBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '80%',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 15,
+    width: '100%',
+  },
+  modalButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 10,
+    elevation: 2,
+    marginTop: 10,
+    minWidth: 100,
     alignItems: 'center',
   },
-  boardItemContent: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  boardItemTitle: {
-    fontSize: 16,
+  modalButtonText: {
+    color: 'white',
     fontWeight: 'bold',
-    color: '#333',
-  },
-  boardItemDeleteText: {
-    fontSize: 14,
-    color: '#e74c3c',
-    paddingHorizontal: 16,
+    textAlign: 'center',
   },
 });
