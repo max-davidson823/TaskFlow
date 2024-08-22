@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Colors } from '../../constants/Colors';
 
 export default function Boards() {
   const router = useRouter();
@@ -122,6 +123,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 20,
     padding: 20,
+    backgroundColor: Colors.light.background,
   },
   boardList: {
     marginTop: 20,
