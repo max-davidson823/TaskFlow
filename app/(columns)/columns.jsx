@@ -15,6 +15,8 @@ export default function Columns() {
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskDueDate, setTaskDueDate] = useState('');
+  const [selectedColumn, setSelectedColumn] = useState(null);
+  const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
 
   useEffect(() => {
     if (!boardId) {
@@ -108,10 +110,28 @@ export default function Columns() {
     }
   }
 
+  async function deleteColumn(columnId) {
+    try {
+      const { error } = await supabase
+        .from('columns')
+        .delete()
+        .eq('id', columnId);
+      if (error) throw error;
+      getColumns(boardId);
+    } catch (error) {
+      Alert.alert('Error deleting column', error.message);
+    }
+  }
+
   const openEditModal = (column) => {
     setEditingColumn(column);
     setEditedColumnName(column.name);
     setIsEditModalVisible(true);
+  };
+
+  const openTaskModal = (column) => {
+    setSelectedColumn(column);
+    setIsTaskModalVisible(true);
   };
 
   return (
@@ -123,7 +143,7 @@ export default function Columns() {
           value={newColumnName}
           onChangeText={setNewColumnName}
         />
-        <TouchableOpacity onPress={addColumn}>
+        <TouchableOpacity onPress={addColumn} style={styles.button}>
           <Text style={styles.buttonText}>Add Column</Text>
         </TouchableOpacity>
       </View>
@@ -131,28 +151,21 @@ export default function Columns() {
         data={columns}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={styles.columnItem}>
+          <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.columnItem}>
             <Text style={styles.columnTitle}>{item.name}</Text>
-            <FlatList
-              data={item.tasks}
-              keyExtractor={(task) => task.id.toString()}
-              renderItem={({ item: task }) => (
-                <View style={styles.taskItem}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                  <Text style={styles.taskDescription}>{task.description}</Text>
-                  <Text style={styles.taskDueDate}>Due: {task.due_date}</Text>
-                </View>
-              )}
-            />
-            <TouchableOpacity onPress={() => openEditModal(item)}>
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteColumn(item.id)}>
-              <Text style={styles.buttonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+            <Text style={styles.taskCount}>{item.tasks.length} tasks</Text>
+            <View style={styles.columnButtons}>
+              <TouchableOpacity onPress={() => openEditModal(item)} style={styles.button}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => deleteColumn(item.id)} style={styles.button}>
+                <Text style={styles.buttonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
         )}
       />
+      {/* Edit Column Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -202,14 +215,45 @@ export default function Columns() {
           </View>
         </View>
       </Modal>
+      {/* Task Display Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isTaskModalVisible}
+        onRequestClose={() => setIsTaskModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>{selectedColumn?.name} Tasks</Text>
+            <FlatList
+              data={selectedColumn?.tasks}
+              keyExtractor={(task) => task.id.toString()}
+              renderItem={({ item: task }) => (
+                <View style={styles.taskItem}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskDescription}>{task.description}</Text>
+                  <Text style={styles.taskDueDate}>Due: {task.due_date}</Text>
+                </View>
+              )}
+            />
+            <TouchableOpacity
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => setIsTaskModalVisible(false)}
+            >
+              <Text style={styles.buttonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 20,
+    flex: 1,
     padding: 20,
+    backgroundColor: '#f5f5f5',
   },
   addColumnContainer: {
     flexDirection: 'row',
@@ -217,9 +261,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   columnItem: {
-    padding: 10,
-    backgroundColor: '#f0f0f0',
+    padding: 15,
+    backgroundColor: '#ffffff',
     marginBottom: 10,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.23,
+    shadowRadius: 2.62,
+    elevation: 4,
   },
   columnTitle: {
     fontSize: 18,
@@ -227,9 +280,10 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   taskItem: {
-    padding: 5,
-    backgroundColor: '#e0e0e0',
-    marginBottom: 5,
+    padding: 10,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 10,
+    borderRadius: 5,
   },
   taskTitle: {
     fontSize: 16,
@@ -242,6 +296,7 @@ const styles = StyleSheet.create({
   taskDueDate: {
     fontSize: 12,
     color: '#999',
+    marginTop: 5,
   },
   input: {
     flex: 1,
@@ -249,15 +304,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#cccccc',
     padding: 10,
+    borderRadius: 5,
+  },
+  button: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
   },
   buttonText: {
-    color: 'blue',
+    color: '#ffffff',
+    fontWeight: 'bold',
   },
   centeredView: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalView: {
     margin: 20,
@@ -273,26 +336,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+    width: '90%',
   },
   modalInput: {
     height: 40,
     margin: 12,
     borderWidth: 1,
     padding: 10,
-    width: 200,
+    width: '100%',
+    borderRadius: 5,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-  },
-  button: {
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
-    backgroundColor: "#2196F3",
+    marginTop: 20,
   },
   buttonClose: {
     backgroundColor: "#FF0000",
+  },
+  taskCount: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  columnButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
 });
