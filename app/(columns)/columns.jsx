@@ -1,6 +1,5 @@
-// columns.jsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
@@ -10,8 +9,12 @@ export default function columns() {
   const [loading, setLoading] = useState(true);
   const [columns, setColumns] = useState([]);
   const [newColumnName, setNewColumnName] = useState('');
-  const [editingColumnId, setEditingColumnId] = useState(null);
+  const [editingColumn, setEditingColumn] = useState(null);
   const [editedColumnName, setEditedColumnName] = useState('');
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [taskDueDate, setTaskDueDate] = useState('');
 
   useEffect(() => {
     if (!boardId) {
@@ -75,9 +78,10 @@ export default function columns() {
       const { error } = await supabase
         .from('columns')
         .update({ name: editedColumnName })
-        .eq('id', editingColumnId);
+        .eq('id', editingColumn.id);
       if (error) throw error;
-      setEditingColumnId(null);
+      setIsEditModalVisible(false);
+      setEditingColumn(null);
       setEditedColumnName('');
       getColumns(boardId);
     } catch (error) {
@@ -85,18 +89,30 @@ export default function columns() {
     }
   }
 
-  async function deleteColumn(columnId) {
+  async function addTaskToColumn(columnId) {
+    if (!taskTitle.trim()) {
+      Alert.alert('Please enter a task title');
+      return;
+    }
     try {
       const { error } = await supabase
-        .from('columns')
-        .delete()
-        .eq('id', columnId);
+        .from('tasks')
+        .insert([{ title: taskTitle, description: taskDescription, due_date: taskDueDate, column_id: columnId, position: 0 }]);
       if (error) throw error;
+      setTaskTitle('');
+      setTaskDescription('');
+      setTaskDueDate('');
       getColumns(boardId);
     } catch (error) {
-      Alert.alert('Error deleting column', error.message);
+      Alert.alert('Error adding task', error.message);
     }
   }
+
+  const openEditModal = (column) => {
+    setEditingColumn(column);
+    setEditedColumnName(column.name);
+    setIsEditModalVisible(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -115,35 +131,63 @@ export default function columns() {
         data={columns}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.columnItem}>
-            {editingColumnId === item.id ? (
-              <>
-                <TextInput
-                  style={styles.input}
-                  value={editedColumnName}
-                  onChangeText={setEditedColumnName}
-                />
-                <TouchableOpacity onPress={updateColumn}>
-                  <Text style={styles.buttonText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setEditingColumnId(null)}>
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text>{item.name}</Text>
-                <TouchableOpacity onPress={() => setEditingColumnId(item.id)}>
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteColumn(item.id)}>
-                  <Text style={styles.buttonText}>Delete</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          <TouchableOpacity style={styles.columnItem} onPress={() => openEditModal(item)}>
+            <Text>{item.name}</Text>
+            <TouchableOpacity onPress={() => deleteColumn(item.id)}>
+              <Text style={styles.buttonText}>Delete</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
         )}
       />
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isEditModalVisible}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <TextInput
+              style={styles.modalInput}
+              value={editedColumnName}
+              onChangeText={setEditedColumnName}
+              placeholder="Edit Column Name"
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={taskTitle}
+              onChangeText={setTaskTitle}
+              placeholder="Task Title"
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={taskDescription}
+              onChangeText={setTaskDescription}
+              placeholder="Task Description"
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={taskDueDate}
+              onChangeText={setTaskDueDate}
+              placeholder="Task Due Date"
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.button} onPress={() => addTaskToColumn(editingColumn.id)}>
+                <Text style={styles.buttonText}>Add Task</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={updateColumn}>
+                <Text style={styles.buttonText}>Save Column</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonClose]}
+                onPress={() => setIsEditModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -175,5 +219,47 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'blue',
+  },
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 22
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  modalInput: {
+    height: 40,
+    margin: 12,
+    borderWidth: 1,
+    padding: 10,
+    width: 200,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+    backgroundColor: "#2196F3",
+  },
+  buttonClose: {
+    backgroundColor: "#FF0000",
   },
 });
