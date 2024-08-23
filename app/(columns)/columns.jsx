@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, M
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function columns() {
+export default function Columns() {
   const router = useRouter();
   const { boardId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
@@ -30,7 +30,7 @@ export default function columns() {
       setLoading(true);
       const { data, error } = await supabase
         .from('columns')
-        .select('id, name, position')
+        .select('id, name, position, tasks (id, title, description, due_date, position)')
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
@@ -129,14 +129,28 @@ export default function columns() {
       </View>
       <FlatList
         data={columns}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.columnItem} onPress={() => openEditModal(item)}>
-            <Text>{item.name}</Text>
+          <View style={styles.columnItem}>
+            <Text style={styles.columnTitle}>{item.name}</Text>
+            <FlatList
+              data={item.tasks}
+              keyExtractor={(task) => task.id.toString()}
+              renderItem={({ item: task }) => (
+                <View style={styles.taskItem}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <Text style={styles.taskDescription}>{task.description}</Text>
+                  <Text style={styles.taskDueDate}>Due: {task.due_date}</Text>
+                </View>
+              )}
+            />
+            <TouchableOpacity onPress={() => openEditModal(item)}>
+              <Text style={styles.buttonText}>Edit</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => deleteColumn(item.id)}>
               <Text style={styles.buttonText}>Delete</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
         )}
       />
       <Modal
@@ -203,12 +217,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   columnItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 10,
     backgroundColor: '#f0f0f0',
     marginBottom: 10,
+  },
+  columnTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  taskItem: {
+    padding: 5,
+    backgroundColor: '#e0e0e0',
+    marginBottom: 5,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  taskDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  taskDueDate: {
+    fontSize: 12,
+    color: '#999',
   },
   input: {
     flex: 1,
@@ -224,7 +257,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 22
+    marginTop: 22,
   },
   modalView: {
     margin: 20,
@@ -235,11 +268,11 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 5
+    elevation: 5,
   },
   modalInput: {
     height: 40,
