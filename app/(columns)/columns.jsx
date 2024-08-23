@@ -151,50 +151,54 @@ export default function Columns() {
     setIsAddColumnModalVisible(true);
   };
 
-  const renderTaskPreview = (task) => (
-    <View style={styles.taskPreview} key={task.id}>
-      <Text style={styles.taskPreviewTitle} numberOfLines={1} ellipsizeMode="tail">
+  const renderTaskCard = (task) => (
+    <TouchableOpacity style={styles.taskCard} key={task.id}>
+      <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
         {task.title}
       </Text>
-      <Text style={styles.taskPreviewDueDate}>
-        Due: {task.due_date || 'Not set'}
-      </Text>
-    </View>
+      {task.due_date && (
+        <View style={styles.taskCardDueDate}>
+          <Ionicons name="calendar-outline" size={12} color="#666" />
+          <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
-  
+
   const renderColumn = ({ item }) => (
-    <View style={styles.columnItem}>
+    <View style={styles.column}>
       <View style={styles.columnHeader}>
         <Text style={styles.columnTitle}>{item.name}</Text>
         <TouchableOpacity onPress={() => openEditModal(item)}>
           <Ionicons name="ellipsis-horizontal" size={24} color="#666" />
         </TouchableOpacity>
       </View>
-      <Text style={styles.taskCount}>{item.tasks.length} tasks</Text>
       <FlatList
         data={item.tasks}
         keyExtractor={(task) => task.id.toString()}
-        renderItem={({ item: task }) => renderTaskPreview(task)}
-        ListEmptyComponent={<Text style={styles.emptyTaskList}>No tasks yet</Text>}
+        renderItem={({ item: task }) => renderTaskCard(task)}
+        ListEmptyComponent={<Text style={styles.emptyTaskList}>No cards</Text>}
+        showsVerticalScrollIndicator={false}
       />
-      <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.button}>
-        <Text style={styles.buttonText}>Add Task</Text>
+      <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.addCardButton}>
+        <Ionicons name="add" size={24} color="#5E6C84" />
+        <Text style={styles.addCardButtonText}>Add a card</Text>
       </TouchableOpacity>
     </View>
   );
-  
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>Board Columns</Text>
+        <Text style={styles.topBarTitle}>Trello Board</Text>
         <TouchableOpacity onPress={openAddColumnModal} style={styles.addButton}>
-          <Ionicons name="add-circle-outline" size={24} color="#2196F3" />
+          <Ionicons name="add" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
       
-      <ScrollView horizontal={true} contentContainerStyle={styles.columnsContainer}>
+      <ScrollView horizontal={true} contentContainerStyle={styles.boardContainer} showsHorizontalScrollIndicator={false}>
         {columns.map((column) => (
-          <View key={column.id}>
+          <View key={column.id} style={styles.columnWrapper}>
             {renderColumn({ item: column })}
           </View>
         ))}
@@ -311,98 +315,103 @@ export default function Columns() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#0079BF',
   },
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    padding: 16,
+    backgroundColor: '#026AA7',
   },
   topBarTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#ffffff',
   },
   addButton: {
-    padding: 5,
+    padding: 8,
+    backgroundColor: '#ffffff33',
+    borderRadius: 4,
   },
-  columnsContainer: {
-    flexDirection: 'row',
+  boardContainer: {
+    padding: 8,
   },
-  columnItem: {
-    width: 300,
-    padding: 15,
-    backgroundColor: '#ffffff',
-    marginRight: 10,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+  columnWrapper: {
+    marginRight: 8,
+  },
+  column: {
+    width: 272,
+    backgroundColor: '#EBECF0',
+    borderRadius: 3,
+    padding: 8,
+    maxHeight: '100%',
   },
   columnHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
   columnTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
+    color: '#172B4D',
   },
-  taskCount: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-  },
-  taskPreview: {
-    backgroundColor: '#f0f0f0',
+  taskCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 3,
     padding: 8,
-    marginVertical: 4,
-    borderRadius: 4,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
   },
-  taskPreviewTitle: {
+  taskCardTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    color: '#172B4D',
+    marginBottom: 4,
   },
-  taskPreviewDueDate: {
+  taskCardDueDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskCardDueDateText: {
     fontSize: 12,
-    color: '#666',
+    color: '#5E6C84',
+    marginLeft: 4,
   },
   emptyTaskList: {
     textAlign: 'center',
-    color: '#999',
-    marginTop: 10,
+    color: '#5E6C84',
+    marginTop: 8,
   },
-  button: {
-    backgroundColor: '#2196F3',
-    padding: 10,
-    borderRadius: 5,
+  addCardButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 5,
-    marginTop: 10,
+    paddingVertical: 8,
   },
-  buttonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+  addCardButtonText: {
+    color: '#5E6C84',
+    marginLeft: 4,
   },
   centeredView: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalView: {
-    margin: 20,
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 35,
-    alignItems: "center",
-    shadowColor: "#000",
+    backgroundColor: '#ffffff',
+    borderRadius: 6,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -411,30 +420,61 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#172B4D',
+    marginBottom: 16,
   },
   modalInput: {
     height: 40,
-    margin: 12,
     borderWidth: 1,
-    padding: 10,
+    borderColor: '#DFE1E6',
+    borderRadius: 3,
+    paddingHorizontal: 8,
     width: '100%',
-    borderRadius: 5,
+    marginBottom: 16,
+    color: '#172B4D',
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     width: '100%',
-    marginTop: 20,
   },
-  buttonClose: {
-    backgroundColor: "#FF0000",
+  button: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 3,
+    marginLeft: 8,
   },
-  buttonDelete: {
-    backgroundColor: "#FF6347",
-  },
-  modalTitle: {
-    fontSize: 20,
+  buttonText: {
+    color: '#ffffff',
     fontWeight: 'bold',
-    marginBottom: 15,
+    fontSize: 14,
+  },
+  primaryButton: {
+    backgroundColor: '#5AAC44',
+  },
+  secondaryButton: {
+    backgroundColor: '#EBECF0',
+  },
+  secondaryButtonText: {
+    color: '#172B4D',
+  },
+  deleteButton: {
+    backgroundColor: '#B04632',
+  },
+  taskDescriptionInput: {
+    height: 80,
+    borderWidth: 1,
+    borderColor: '#DFE1E6',
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    width: '100%',
+    marginBottom: 16,
+    color: '#172B4D',
+    textAlignVertical: 'top',
   },
 });
