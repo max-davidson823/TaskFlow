@@ -134,6 +134,16 @@ export default function Columns() {
     setIsTaskModalVisible(true);
   };
 
+  const renderTaskPreview = (task) => (
+    <View style={styles.taskPreview} key={task.id}>
+      <Text style={styles.taskPreviewTitle} numberOfLines={1} ellipsizeMode="tail">
+        {task.title}
+      </Text>
+      <Text style={styles.taskPreviewDueDate}>
+        Due: {task.due_date || 'Not set'}
+      </Text>
+    </View>
+  );
   return (
     <View style={styles.container}>
       <View style={styles.addColumnContainer}>
@@ -151,18 +161,27 @@ export default function Columns() {
         data={columns}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.columnItem}>
+          <View style={styles.columnItem}>
             <Text style={styles.columnTitle}>{item.name}</Text>
             <Text style={styles.taskCount}>{item.tasks.length} tasks</Text>
+            <FlatList
+              data={item.tasks}
+              keyExtractor={(task) => task.id.toString()}
+              renderItem={({ item: task }) => renderTaskPreview(task)}
+              ListEmptyComponent={<Text style={styles.emptyTaskList}>No tasks yet</Text>}
+            />
             <View style={styles.columnButtons}>
               <TouchableOpacity onPress={() => openEditModal(item)} style={styles.button}>
                 <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.button}>
+                <Text style={styles.buttonText}>View All</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => deleteColumn(item.id)} style={styles.button}>
                 <Text style={styles.buttonText}>Delete</Text>
               </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         )}
       />
       {/* Edit Column Modal */}
@@ -232,9 +251,10 @@ export default function Columns() {
                 <View style={styles.taskItem}>
                   <Text style={styles.taskTitle}>{task.title}</Text>
                   <Text style={styles.taskDescription}>{task.description}</Text>
-                  <Text style={styles.taskDueDate}>Due: {task.due_date}</Text>
+                  <Text style={styles.taskDueDate}>Due: {task.due_date || 'Not set'}</Text>
                 </View>
               )}
+              ListEmptyComponent={<Text style={styles.emptyTaskList}>No tasks in this column</Text>}
             />
             <TouchableOpacity
               style={[styles.button, styles.buttonClose]}
@@ -311,6 +331,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     alignItems: 'center',
+    marginHorizontal: 5,
   },
   buttonText: {
     color: '#ffffff',
@@ -368,6 +389,25 @@ const styles = StyleSheet.create({
   columnButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  taskPreview: {
+    backgroundColor: '#f0f0f0',
+    padding: 8,
+    marginVertical: 4,
+    borderRadius: 4,
+  },
+  taskPreviewTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  taskPreviewDueDate: {
+    fontSize: 12,
+    color: '#666',
+  },
+  emptyTaskList: {
+    textAlign: 'center',
+    color: '#999',
     marginTop: 10,
   },
 });
