@@ -2,8 +2,167 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, ScrollView } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons'; // Make sure to install @expo/vector-icons
+import { Ionicons } from '@expo/vector-icons';
 
+// Components
+const TopBar = ({ title, onAddColumn }) => (
+  <View style={styles.topBar}>
+    <Text style={styles.topBarTitle}>{title}</Text>
+    <TouchableOpacity onPress={onAddColumn} style={styles.addButton}>
+      <Ionicons name="add" size={24} color="#ffffff" />
+    </TouchableOpacity>
+  </View>
+);
+
+const TaskCard = ({ task }) => (
+  <TouchableOpacity style={styles.taskCard}>
+    <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
+      {task.title}
+    </Text>
+    {task.due_date && (
+      <View style={styles.taskCardDueDate}>
+        <Ionicons name="calendar-outline" size={12} color="#666" />
+        <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
+      </View>
+    )}
+  </TouchableOpacity>
+);
+
+const Column = ({ column, onEditColumn, onAddTask }) => (
+  <View style={styles.column}>
+    <View style={styles.columnHeader}>
+      <Text style={styles.columnTitle}>{column.name}</Text>
+      <TouchableOpacity onPress={() => onEditColumn(column)}>
+        <Ionicons name="ellipsis-horizontal" size={24} color="#666" />
+      </TouchableOpacity>
+    </View>
+    <FlatList
+      data={column.tasks}
+      keyExtractor={(task) => task.id.toString()}
+      renderItem={({ item: task }) => <TaskCard task={task} />}
+      ListEmptyComponent={<Text style={styles.emptyTaskList}>No cards</Text>}
+      showsVerticalScrollIndicator={false}
+    />
+    <TouchableOpacity onPress={() => onAddTask(column)} style={styles.addCardButton}>
+      <Ionicons name="add" size={24} color="#5E6C84" />
+      <Text style={styles.addCardButtonText}>Add a card</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+// Modals
+const AddColumnModal = ({ visible, onClose, onAddColumn, newColumnName, setNewColumnName }) => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={visible}
+    onRequestClose={onClose}
+  >
+    <View style={styles.centeredView}>
+      <View style={styles.modalView}>
+        <Text style={styles.modalTitle}>Add New Column</Text>
+        <TextInput
+          style={styles.modalInput}
+          value={newColumnName}
+          onChangeText={setNewColumnName}
+          placeholder="Column Name"
+        />
+        <View style={styles.modalButtons}>
+          <TouchableOpacity style={styles.button} onPress={onAddColumn}>
+            <Text style={styles.buttonText}>Add Column</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonClose]}
+            onPress={onClose}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+const AddTaskModal = ({ visible, onClose, onAddTask, selectedColumn, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={visible}
+    onRequestClose={onClose}
+  >
+    <View style={styles.centeredView}>
+      <View style={styles.modalView}>
+        <Text style={styles.modalTitle}>Add Task to {selectedColumn?.name}</Text>
+        <TextInput
+          style={styles.modalInput}
+          value={taskTitle}
+          onChangeText={setTaskTitle}
+          placeholder="Task Title"
+        />
+        <TextInput
+          style={styles.modalInput}
+          value={taskDescription}
+          onChangeText={setTaskDescription}
+          placeholder="Task Description"
+        />
+        <TextInput
+          style={styles.modalInput}
+          value={taskDueDate}
+          onChangeText={setTaskDueDate}
+          placeholder="Due Date (YYYY-MM-DD)"
+        />
+        <View style={styles.modalButtons}>
+          <TouchableOpacity style={styles.button} onPress={onAddTask}>
+            <Text style={styles.buttonText}>Add Task</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonClose]}
+            onPress={onClose}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+const EditColumnModal = ({ visible, onClose, onUpdateColumn, onDeleteColumn, editedColumnName, setEditedColumnName }) => (
+  <Modal
+    animationType="slide"
+    transparent={true}
+    visible={visible}
+    onRequestClose={onClose}
+  >
+    <View style={styles.centeredView}>
+      <View style={styles.modalView}>
+        <Text style={styles.modalTitle}>Edit Column</Text>
+        <TextInput
+          style={styles.modalInput}
+          value={editedColumnName}
+          onChangeText={setEditedColumnName}
+          placeholder="Column Name"
+        />
+        <View style={styles.modalButtons}>
+          <TouchableOpacity style={styles.button} onPress={onUpdateColumn}>
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.buttonDelete]} onPress={onDeleteColumn}>
+            <Text style={styles.buttonText}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.buttonClose]}
+            onPress={onClose}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+// Main component
 export default function Columns() {
   const router = useRouter();
   const { boardId } = useLocalSearchParams();
@@ -25,7 +184,6 @@ export default function Columns() {
       console.error('No boardId received');
       return;
     }
-  
     getColumns(boardId);
   }, [boardId]);
 
@@ -38,15 +196,8 @@ export default function Columns() {
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching columns:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.error('No column data received');
-        return;
-      }
+      if (error) throw error;
+      if (!data) throw new Error('No column data received');
 
       setColumns(data);
     } catch (error) {
@@ -151,163 +302,51 @@ export default function Columns() {
     setIsAddColumnModalVisible(true);
   };
 
-  const renderTaskCard = (task) => (
-    <TouchableOpacity style={styles.taskCard} key={task.id}>
-      <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
-        {task.title}
-      </Text>
-      {task.due_date && (
-        <View style={styles.taskCardDueDate}>
-          <Ionicons name="calendar-outline" size={12} color="#666" />
-          <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-
-  const renderColumn = ({ item }) => (
-    <View style={styles.column}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle}>{item.name}</Text>
-        <TouchableOpacity onPress={() => openEditModal(item)}>
-          <Ionicons name="ellipsis-horizontal" size={24} color="#666" />
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={item.tasks}
-        keyExtractor={(task) => task.id.toString()}
-        renderItem={({ item: task }) => renderTaskCard(task)}
-        ListEmptyComponent={<Text style={styles.emptyTaskList}>No cards</Text>}
-        showsVerticalScrollIndicator={false}
-      />
-      <TouchableOpacity onPress={() => openTaskModal(item)} style={styles.addCardButton}>
-        <Ionicons name="add" size={24} color="#5E6C84" />
-        <Text style={styles.addCardButtonText}>Add a card</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <Text style={styles.topBarTitle}>Trello Board</Text>
-        <TouchableOpacity onPress={openAddColumnModal} style={styles.addButton}>
-          <Ionicons name="add" size={24} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
+      <TopBar title="Trello Board" onAddColumn={openAddColumnModal} />
       
       <ScrollView horizontal={true} contentContainerStyle={styles.boardContainer} showsHorizontalScrollIndicator={false}>
         {columns.map((column) => (
           <View key={column.id} style={styles.columnWrapper}>
-            {renderColumn({ item: column })}
+            <Column 
+              column={column}
+              onEditColumn={openEditModal}
+              onAddTask={openTaskModal}
+            />
           </View>
         ))}
       </ScrollView>
 
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <AddColumnModal 
         visible={isAddColumnModalVisible}
-        onRequestClose={() => setIsAddColumnModalVisible(false)}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Add New Column</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={newColumnName}
-              onChangeText={setNewColumnName}
-              placeholder="Column Name"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.button} onPress={addColumn}>
-                <Text style={styles.buttonText}>Add Column</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonClose]}
-                onPress={() => setIsAddColumnModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsAddColumnModalVisible(false)}
+        onAddColumn={addColumn}
+        newColumnName={newColumnName}
+        setNewColumnName={setNewColumnName}
+      />
       
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <AddTaskModal 
         visible={isTaskModalVisible}
-        onRequestClose={() => setIsTaskModalVisible(false)}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Add Task to {selectedColumn?.name}</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={taskTitle}
-              onChangeText={setTaskTitle}
-              placeholder="Task Title"
-            />
-            <TextInput
-              style={styles.modalInput}
-              value={taskDescription}
-              onChangeText={setTaskDescription}
-              placeholder="Task Description"
-            />
-            <TextInput
-              style={styles.modalInput}
-              value={taskDueDate}
-              onChangeText={setTaskDueDate}
-              placeholder="Due Date (YYYY-MM-DD)"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.button} onPress={addTaskToColumn}>
-                <Text style={styles.buttonText}>Add Task</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonClose]}
-                onPress={() => setIsTaskModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsTaskModalVisible(false)}
+        onAddTask={addTaskToColumn}
+        selectedColumn={selectedColumn}
+        taskTitle={taskTitle}
+        setTaskTitle={setTaskTitle}
+        taskDescription={taskDescription}
+        setTaskDescription={setTaskDescription}
+        taskDueDate={taskDueDate}
+        setTaskDueDate={setTaskDueDate}
+      />
 
-      <Modal
-        animationType="slide"
-        transparent={true}
+      <EditColumnModal 
         visible={isEditModalVisible}
-        onRequestClose={() => setIsEditModalVisible(false)}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>Edit Column</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={editedColumnName}
-              onChangeText={setEditedColumnName}
-              placeholder="Column Name"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.button} onPress={updateColumn}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.buttonDelete]} onPress={() => deleteColumn(editingColumn.id)}>
-                <Text style={styles.buttonText}>Delete</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonClose]}
-                onPress={() => setIsEditModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsEditModalVisible(false)}
+        onUpdateColumn={updateColumn}
+        onDeleteColumn={() => deleteColumn(editingColumn.id)}
+        editedColumnName={editedColumnName}
+        setEditedColumnName={setEditedColumnName}
+      />
     </View>
   );
 }
@@ -450,7 +489,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   buttonText: {
-    color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -464,6 +502,12 @@ const styles = StyleSheet.create({
     color: '#172B4D',
   },
   deleteButton: {
+    backgroundColor: '#B04632',
+  },
+  buttonClose: {
+    backgroundColor: '#EBECF0',
+  },
+  buttonDelete: {
     backgroundColor: '#B04632',
   },
   taskDescriptionInput: {
