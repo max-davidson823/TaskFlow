@@ -15,19 +15,41 @@ const TopBar = ({ title, onAddCard }) => (
   </View>
 );
 
-const TaskCard = ({ task }) => (
-  <TouchableOpacity style={styles.taskCard}>
-    <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
-      {task.title}
-    </Text>
-    {task.due_date && (
-      <View style={styles.taskCardDueDate}>
-        <Ionicons name="calendar-outline" size={12} color="#666" />
-        <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-);
+const TaskCard = ({ task }) => {
+  // Function to format date and time with AM/PM and time zones
+  const formatDateTime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    
+    // Adjust for local timezone offset
+    const localTime = new Date(date.getTime() + date.getTimezoneOffset() * 6000);
+  
+    const formattedDate = `${localTime.getMonth() + 1}/${localTime.getDate()}`;
+    
+    let hours = localTime.getHours();
+    const minutes = localTime.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // The hour '0' should be '12'
+    
+    const formattedTime = `${hours}:${minutes} ${ampm}`;
+    
+    return `${formattedDate} ${formattedTime}`;
+  };
+  
+  return (
+    <TouchableOpacity style={styles.taskCard}>
+      <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
+        {task.title}
+      </Text>
+      {task.due_date && (
+        <View style={styles.taskCardDueDate}>
+          <Ionicons name="calendar-outline" size={12} color="#666" />
+          <Text style={styles.taskCardDueDateText}>{formatDateTime(task.due_date)}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 const Card = ({ card, onEditCard, onAddTask }) => (
   <View style={styles.card}>
@@ -87,13 +109,15 @@ const AddCardModal = ({ visible, onClose, onAddCard, newCardName, setNewCardName
 const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [isAM, setIsAM] = useState(true);
 
   const handleDateChange = (event, date) => {
     if (date) {
       setSelectedDate(date);
       setShowDatePicker(false);
-      setShowTimePicker(true); // Show time picker after date is selected
+      setShowTimePicker(true);
     } else {
       setShowDatePicker(false);
     }
@@ -101,14 +125,34 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
 
   const handleTimeChange = (event, time) => {
     if (time) {
-      const finalDateTime = new Date(selectedDate);
-      finalDateTime.setHours(time.getHours());
-      finalDateTime.setMinutes(time.getMinutes());
-
-      const formattedDateTime = `${finalDateTime.getMonth() + 1}/${finalDateTime.getDate()}/${finalDateTime.getFullYear().toString().slice(-2)} ${finalDateTime.getHours()}:${finalDateTime.getMinutes().toString().padStart(2, '0')}`;
-      setTaskDueDate(formattedDateTime);
+      setSelectedTime(time);
+      setShowTimePicker(false);
+      updateTaskDueDate(time);
+    } else {
+      setShowTimePicker(false);
     }
-    setShowTimePicker(false);
+  };
+
+  const updateTaskDueDate = (time) => {
+    const finalDateTime = new Date(selectedDate);
+    let hours = time.getHours();
+    
+    if (!isAM && hours < 12) {
+      hours += 12;
+    } else if (isAM && hours === 12) {
+      hours = 0;
+    }
+
+    finalDateTime.setHours(hours);
+    finalDateTime.setMinutes(time.getMinutes());
+
+    const formattedDateTime = `${finalDateTime.getMonth() + 1}/${finalDateTime.getDate()}/${finalDateTime.getFullYear().toString().slice(-2)} ${hours % 12 || 12}:${finalDateTime.getMinutes().toString().padStart(2, '0')} ${isAM ? 'AM' : 'PM'}`;
+    setTaskDueDate(formattedDateTime);
+  };
+
+  const toggleAMPM = () => {
+    setIsAM(!isAM);
+    updateTaskDueDate(selectedTime);
   };
 
   return (
@@ -128,10 +172,11 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
             placeholder="Task Title"
           />
           <TextInput
-            style={styles.modalInput}
+            style={[styles.modalInput, styles.taskDescriptionInput]}
             value={taskDescription}
             onChangeText={setTaskDescription}
             placeholder="Task Description"
+            multiline={true}
           />
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateInput}>
             <Text style={{ color: taskDueDate ? '#000' : '#888' }}>
@@ -140,7 +185,7 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker
-              value={new Date()}
+              value={selectedDate}
               mode="date"
               display="default"
               onChange={handleDateChange}
@@ -148,11 +193,17 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
           )}
           {showTimePicker && (
             <DateTimePicker
-              value={new Date()}
+              value={selectedTime}
               mode="time"
               display="default"
               onChange={handleTimeChange}
             />
+          )}
+          {taskDueDate && (
+            <TouchableOpacity onPress={toggleAMPM} style={styles.ampmToggle}>
+              <Text style={styles.ampmToggleText}>{isAM ? 'AM' : 'PM'}</Text>
+              <Ionicons name="swap-horizontal" size={24} color="#026AA7" />
+            </TouchableOpacity>
           )}
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.button} onPress={onAddTask}>
