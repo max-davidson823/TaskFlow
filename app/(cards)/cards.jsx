@@ -16,19 +16,27 @@ const TopBar = ({ title, onAddCard }) => (
   </View>
 );
 
-const TaskCard = ({ task }) => (
-  <TouchableOpacity style={styles.taskCard}>
-    <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
-      {task.title}
-    </Text>
-    {task.due_date && (
-      <View style={styles.taskCardDueDate}>
-        <Ionicons name="calendar-outline" size={12} color="#666" />
-        <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-);
+const TaskCard = ({ task }) => {
+  const formatDueDate = (dueDate) => {
+    if (!dueDate) return '';
+    const localDueDate = moment(dueDate).local();
+    return localDueDate.format('YYYY-MM-DD HH:mm');
+  };
+
+  return (
+    <TouchableOpacity style={styles.taskCard}>
+      <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
+        {task.title}
+      </Text>
+      {task.due_date && (
+        <View style={styles.taskCardDueDate}>
+          <Ionicons name="calendar-outline" size={12} color="#666" />
+          <Text style={styles.taskCardDueDateText}>{formatDueDate(task.due_date)}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 const Card = ({ card, onEditCard, onAddTask }) => (
   <View style={styles.card}>
@@ -120,8 +128,7 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
       newTime.getHours(),
       newTime.getMinutes()
     );
-    const userTimeZone = moment.tz.guess();
-    const formattedDate = moment(combinedDate).tz(userTimeZone).format('YYYY-MM-DD HH:mm:ss z');
+    const formattedDate = moment(combinedDate).format('YYYY-MM-DDTHH:mm:ss');
     setTaskDueDate(formattedDate);
   };
 
@@ -374,7 +381,7 @@ export default function cards() {
       Alert.alert('Error adding task', error.message);
     }
   }
-
+  
   async function deleteCard(cardId) {
     try {
       const { error } = await supabase
