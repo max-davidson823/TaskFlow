@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Modal, ScrollView, Platform } from 'react-native';
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment-timezone';
 
 // Components
 const TopBar = ({ title, onAddCard }) => (
@@ -15,41 +16,19 @@ const TopBar = ({ title, onAddCard }) => (
   </View>
 );
 
-const TaskCard = ({ task }) => {
-  // Function to format date and time with AM/PM and time zones
-  const formatDateTime = (dateTimeString) => {
-    const date = new Date(dateTimeString);
-    
-    // Adjust for local timezone offset
-    const localTime = new Date(date.getTime() + date.getTimezoneOffset() * 6000);
-  
-    const formattedDate = `${localTime.getMonth() + 1}/${localTime.getDate()}`;
-    
-    let hours = localTime.getHours();
-    const minutes = localTime.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // The hour '0' should be '12'
-    
-    const formattedTime = `${hours}:${minutes} ${ampm}`;
-    
-    return `${formattedDate} ${formattedTime}`;
-  };
-  
-  return (
-    <TouchableOpacity style={styles.taskCard}>
-      <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
-        {task.title}
-      </Text>
-      {task.due_date && (
-        <View style={styles.taskCardDueDate}>
-          <Ionicons name="calendar-outline" size={12} color="#666" />
-          <Text style={styles.taskCardDueDateText}>{formatDateTime(task.due_date)}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
+const TaskCard = ({ task }) => (
+  <TouchableOpacity style={styles.taskCard}>
+    <Text style={styles.taskCardTitle} numberOfLines={2} ellipsizeMode="tail">
+      {task.title}
+    </Text>
+    {task.due_date && (
+      <View style={styles.taskCardDueDate}>
+        <Ionicons name="calendar-outline" size={12} color="#666" />
+        <Text style={styles.taskCardDueDateText}>{task.due_date}</Text>
+      </View>
+    )}
+  </TouchableOpacity>
+);
 
 const Card = ({ card, onEditCard, onAddTask }) => (
   <View style={styles.card}>
@@ -109,50 +88,51 @@ const AddCardModal = ({ visible, onClose, onAddCard, newCardName, setNewCardName
 const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState(new Date());
-  const [isAM, setIsAM] = useState(true);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [is24Hour, setIs24Hour] = useState(false);
 
-  const handleDateChange = (event, date) => {
-    if (date) {
-      setSelectedDate(date);
-      setShowDatePicker(false);
-      setShowTimePicker(true);
-    } else {
-      setShowDatePicker(false);
-    }
+  useEffect(() => {
+    // Check if the device is set to use 24-hour format
+    const is24 = new Date().toLocaleTimeString().includes('AM') ? false : true;
+    setIs24Hour(is24);
+  }, []);
+
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === 'ios');
+    setDate(currentDate);
+    updateTaskDueDate(currentDate, time);
   };
 
-  const handleTimeChange = (event, time) => {
-    if (time) {
-      setSelectedTime(time);
-      setShowTimePicker(false);
-      updateTaskDueDate(time);
-    } else {
-      setShowTimePicker(false);
-    }
+  const onTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || time;
+    setShowTimePicker(Platform.OS === 'ios');
+    setTime(currentTime);
+    updateTaskDueDate(date, currentTime);
   };
 
-  const updateTaskDueDate = (time) => {
-    const finalDateTime = new Date(selectedDate);
-    let hours = time.getHours();
-    
-    if (!isAM && hours < 12) {
-      hours += 12;
-    } else if (isAM && hours === 12) {
-      hours = 0;
-    }
-
-    finalDateTime.setHours(hours);
-    finalDateTime.setMinutes(time.getMinutes());
-
-    const formattedDateTime = `${finalDateTime.getMonth() + 1}/${finalDateTime.getDate()}/${finalDateTime.getFullYear().toString().slice(-2)} ${hours % 12 || 12}:${finalDateTime.getMinutes().toString().padStart(2, '0')} ${isAM ? 'AM' : 'PM'}`;
-    setTaskDueDate(formattedDateTime);
+  const updateTaskDueDate = (newDate, newTime) => {
+    const combinedDate = new Date(
+      newDate.getFullYear(),
+      newDate.getMonth(),
+      newDate.getDate(),
+      newTime.getHours(),
+      newTime.getMinutes()
+    );
+    const userTimeZone = moment.tz.guess();
+    const formattedDate = moment(combinedDate).tz(userTimeZone).format('YYYY-MM-DD HH:mm:ss z');
+    setTaskDueDate(formattedDate);
   };
 
-  const toggleAMPM = () => {
-    setIsAM(!isAM);
-    updateTaskDueDate(selectedTime);
+  const toggleDatePicker = () => {
+    setShowDatePicker(!showDatePicker);
+    setShowTimePicker(false);
+  };
+
+  const toggleTimePicker = () => {
+    setShowTimePicker(!showTimePicker);
+    setShowDatePicker(false);
   };
 
   return (
@@ -178,32 +158,49 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, se
             placeholder="Task Description"
             multiline={true}
           />
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateInput}>
-            <Text style={{ color: taskDueDate ? '#000' : '#888' }}>
-              {taskDueDate || 'Select Due Date & Time'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.dateTimeContainer}>
+            <TouchableOpacity
+              style={styles.dateTimeButton}
+              onPress={toggleDatePicker}
+            >
+              <Text>{date ? moment(date).format('YYYY-MM-DD') : 'Set Date'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.dateTimeButton}
+              onPress={toggleTimePicker}
+            >
+              <Text>{time ? moment(time).format(is24Hour ? 'HH:mm' : 'hh:mm A') : 'Set Time'}</Text>
+            </TouchableOpacity>
+          </View>
           {showDatePicker && (
             <DateTimePicker
-              value={selectedDate}
+              testID="datePicker"
+              value={date}
               mode="date"
+              is24Hour={true}
               display="default"
-              onChange={handleDateChange}
+              onChange={onDateChange}
             />
           )}
           {showTimePicker && (
             <DateTimePicker
-              value={selectedTime}
+              testID="timePicker"
+              value={time}
               mode="time"
+              is24Hour={is24Hour}
               display="default"
-              onChange={handleTimeChange}
+              onChange={onTimeChange}
             />
           )}
-          {taskDueDate && (
-            <TouchableOpacity onPress={toggleAMPM} style={styles.ampmToggle}>
-              <Text style={styles.ampmToggleText}>{isAM ? 'AM' : 'PM'}</Text>
-              <Ionicons name="swap-horizontal" size={24} color="#026AA7" />
-            </TouchableOpacity>
+          {(Platform.OS === 'ios' && (showDatePicker || showTimePicker)) && (
+            <View style={styles.iosPickerButtons}>
+              <TouchableOpacity onPress={() => {
+                setShowDatePicker(false);
+                setShowTimePicker(false);
+              }}>
+                <Text style={styles.iosPickerButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
           )}
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.button} onPress={onAddTask}>
@@ -629,15 +626,29 @@ const styles = StyleSheet.create({
     color: '#172B4D',
     textAlignVertical: 'top',
   },
-  dateInput: {
-    height: 40,
-    borderWidth: 1,
-    borderColor: '#DFE1E6',
-    borderRadius: 3,
-    paddingHorizontal: 8,
-    justifyContent: 'center',
+  dateTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     width: '100%',
     marginBottom: 16,
-    color: '#172B4D',
+  },
+  dateTimeButton: {
+    flex: 1,
+    backgroundColor: '#EBECF0',
+    padding: 10,
+    borderRadius: 3,
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  iosPickerButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+    marginBottom: 16,
+  },
+  iosPickerButtonText: {
+    color: '#0079BF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
