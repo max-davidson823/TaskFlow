@@ -126,7 +126,7 @@ export default function Boards() {
   }
 
   function navigateToColumns(boardId) {
-    router.push(`/(columns)/columns?boardId=${boardId}`);
+    router.push(`/(cards)/cards?boardId=${boardId}`);
   }
 
   const renderBoardItem = ({ item, index }) => {

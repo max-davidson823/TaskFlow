@@ -3,12 +3,13 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, M
 import { supabase } from '../(auth)/lib/supabase';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Components
-const TopBar = ({ title, onAddColumn }) => (
+const TopBar = ({ title, onAddCard }) => (
   <View style={styles.topBar}>
     <Text style={styles.topBarTitle}>{title}</Text>
-    <TouchableOpacity onPress={onAddColumn} style={styles.addButton}>
+    <TouchableOpacity onPress={onAddCard} style={styles.addButton}>
       <Ionicons name="add" size={24} color="#ffffff" />
     </TouchableOpacity>
   </View>
@@ -28,30 +29,30 @@ const TaskCard = ({ task }) => (
   </TouchableOpacity>
 );
 
-const Column = ({ column, onEditColumn, onAddTask }) => (
-  <View style={styles.column}>
-    <View style={styles.columnHeader}>
-      <Text style={styles.columnTitle}>{column.name}</Text>
-      <TouchableOpacity onPress={() => onEditColumn(column)}>
+const Card = ({ card, onEditCard, onAddTask }) => (
+  <View style={styles.card}>
+    <View style={styles.cardHeader}>
+      <Text style={styles.cardTitle}>{card.name}</Text>
+      <TouchableOpacity onPress={() => onEditCard(card)}>
         <Ionicons name="ellipsis-horizontal" size={24} color="#666" />
       </TouchableOpacity>
     </View>
     <FlatList
-      data={column.tasks}
+      data={card.tasks}
       keyExtractor={(task) => task.id.toString()}
       renderItem={({ item: task }) => <TaskCard task={task} />}
-      ListEmptyComponent={<Text style={styles.emptyTaskList}>No cards</Text>}
+      ListEmptyComponent={<Text style={styles.emptyTaskList}>No tasks</Text>}
       showsVerticalScrollIndicator={false}
     />
-    <TouchableOpacity onPress={() => onAddTask(column)} style={styles.addCardButton}>
+    <TouchableOpacity onPress={() => onAddTask(card)} style={styles.addCardButton}>
       <Ionicons name="add" size={24} color="#5E6C84" />
-      <Text style={styles.addCardButtonText}>Add a card</Text>
+      <Text style={styles.addCardButtonText}>Add a task</Text>
     </TouchableOpacity>
   </View>
 );
 
 // Modals
-const AddColumnModal = ({ visible, onClose, onAddColumn, newColumnName, setNewColumnName }) => (
+const AddCardModal = ({ visible, onClose, onAddCard, newCardName, setNewCardName }) => (
   <Modal
     animationType="slide"
     transparent={true}
@@ -60,16 +61,16 @@ const AddColumnModal = ({ visible, onClose, onAddColumn, newColumnName, setNewCo
   >
     <View style={styles.centeredView}>
       <View style={styles.modalView}>
-        <Text style={styles.modalTitle}>Add New Column</Text>
+        <Text style={styles.modalTitle}>Add New Card</Text>
         <TextInput
           style={styles.modalInput}
-          value={newColumnName}
-          onChangeText={setNewColumnName}
-          placeholder="Column Name"
+          value={newCardName}
+          onChangeText={setNewCardName}
+          placeholder="Card Name"
         />
         <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.button} onPress={onAddColumn}>
-            <Text style={styles.buttonText}>Add Column</Text>
+          <TouchableOpacity style={styles.button} onPress={onAddCard}>
+            <Text style={styles.buttonText}>Add Card</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.buttonClose]}
@@ -83,7 +84,7 @@ const AddColumnModal = ({ visible, onClose, onAddColumn, newColumnName, setNewCo
   </Modal>
 );
 
-const AddTaskModal = ({ visible, onClose, onAddTask, selectedColumn, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => (
+const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => (
   <Modal
     animationType="slide"
     transparent={true}
@@ -92,7 +93,7 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedColumn, taskTitle, 
   >
     <View style={styles.centeredView}>
       <View style={styles.modalView}>
-        <Text style={styles.modalTitle}>Add Task to {selectedColumn?.name}</Text>
+        <Text style={styles.modalTitle}>Add Task to {selectedCard?.name}</Text>
         <TextInput
           style={styles.modalInput}
           value={taskTitle}
@@ -127,7 +128,7 @@ const AddTaskModal = ({ visible, onClose, onAddTask, selectedColumn, taskTitle, 
   </Modal>
 );
 
-const EditColumnModal = ({ visible, onClose, onUpdateColumn, onDeleteColumn, editedColumnName, setEditedColumnName }) => (
+const EditCardModal = ({ visible, onClose, onUpdateCard, onDeleteCard, editedCardName, setEditedCardName, editedCardDescription, setEditedCardDescription }) => (
   <Modal
     animationType="slide"
     transparent={true}
@@ -136,18 +137,25 @@ const EditColumnModal = ({ visible, onClose, onUpdateColumn, onDeleteColumn, edi
   >
     <View style={styles.centeredView}>
       <View style={styles.modalView}>
-        <Text style={styles.modalTitle}>Edit Column</Text>
+        <Text style={styles.modalTitle}>Edit Card</Text>
         <TextInput
           style={styles.modalInput}
-          value={editedColumnName}
-          onChangeText={setEditedColumnName}
-          placeholder="Column Name"
+          value={editedCardName}
+          onChangeText={setEditedCardName}
+          placeholder="Card Name"
+        />
+        <TextInput
+          style={[styles.modalInput, styles.taskDescriptionInput]}
+          value={editedCardDescription}
+          onChangeText={setEditedCardDescription}
+          placeholder="Card Description"
+          multiline={true}
         />
         <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.button} onPress={onUpdateColumn}>
+          <TouchableOpacity style={styles.button} onPress={onUpdateCard}>
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.buttonDelete]} onPress={onDeleteColumn}>
+          <TouchableOpacity style={[styles.button, styles.buttonDelete]} onPress={onDeleteCard}>
             <Text style={styles.buttonText}>Delete</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -163,20 +171,21 @@ const EditColumnModal = ({ visible, onClose, onUpdateColumn, onDeleteColumn, edi
 );
 
 // Main component
-export default function Columns() {
+export default function cards() {
   const router = useRouter();
   const { boardId } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
-  const [columns, setColumns] = useState([]);
-  const [isAddColumnModalVisible, setIsAddColumnModalVisible] = useState(false);
-  const [newColumnName, setNewColumnName] = useState('');
-  const [editingColumn, setEditingColumn] = useState(null);
-  const [editedColumnName, setEditedColumnName] = useState('');
+  const [cards, setCards] = useState([]);
+  const [isAddCardModalVisible, setIsAddCardModalVisible] = useState(false);
+  const [newCardName, setNewCardName] = useState('');
+  const [editingCard, setEditingCard] = useState(null);
+  const [editedCardName, setEditedCardName] = useState('');
+  const [editedCardDescription, setEditedCardDescription] = useState('');
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskDueDate, setTaskDueDate] = useState('');
-  const [selectedColumn, setSelectedColumn] = useState(null);
+  const [selectedCard, setSelectedCard] = useState(null);
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
 
   useEffect(() => {
@@ -184,68 +193,72 @@ export default function Columns() {
       console.error('No boardId received');
       return;
     }
-    getColumns(boardId);
+    getCards(boardId);
   }, [boardId]);
 
-  async function getColumns(boardId) {
+  async function getCards(boardId) {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('columns')
+        .from('cards')
         .select('id, name, position, tasks (id, title, description, due_date, position)')
         .eq('board_id', boardId)
         .order('position', { ascending: true });
 
       if (error) throw error;
-      if (!data) throw new Error('No column data received');
+      if (!data) throw new Error('No card data received');
 
-      setColumns(data);
+      setCards(data);
     } catch (error) {
-      Alert.alert('Loading columns failed', error.message);
+      Alert.alert('Loading cards failed', error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  async function addColumn() {
-    if (!newColumnName.trim()) {
-      Alert.alert('Please enter a column name');
+  async function addCard() {
+    if (!newCardName.trim()) {
+      Alert.alert('Please enter a card name');
       return;
     }
     try {
       const { error } = await supabase
-        .from('columns')
-        .insert([{ name: newColumnName, board_id: boardId, position: columns.length }]);
+        .from('cards')
+        .insert([{ name: newCardName, board_id: boardId, position: cards.length }]);
       if (error) throw error;
-      setNewColumnName('');
-      setIsAddColumnModalVisible(false);
-      getColumns(boardId);
+      setNewCardName('');
+      setIsAddCardModalVisible(false);
+      getCards(boardId);
     } catch (error) {
-      Alert.alert('Error adding column', error.message);
+      Alert.alert('Error adding card', error.message);
     }
   }
 
-  async function updateColumn() {
-    if (!editedColumnName.trim()) {
-      Alert.alert('Please enter a column name');
+  async function updateCard() {
+    if (!editedCardName.trim()) {
+      Alert.alert('Please enter a card name');
       return;
     }
     try {
       const { error } = await supabase
-        .from('columns')
-        .update({ name: editedColumnName })
-        .eq('id', editingColumn.id);
+        .from('cards')
+        .update({ 
+          name: editedCardName,
+          description: editedCardDescription
+        })
+        .eq('id', editingCard.id);
       if (error) throw error;
       setIsEditModalVisible(false);
-      setEditingColumn(null);
-      setEditedColumnName('');
-      getColumns(boardId);
+      setEditingCard(null);
+      setEditedCardName('');
+      setEditedCardDescription('');
+      getCards(boardId);
     } catch (error) {
-      Alert.alert('Error updating column', error.message);
+      Alert.alert('Error updating card', error.message);
     }
   }
-
-  async function addTaskToColumn() {
+  
+  async function addTaskToCard() {
     if (!taskTitle.trim()) {
       Alert.alert('Please enter a task title');
       return;
@@ -257,80 +270,81 @@ export default function Columns() {
           title: taskTitle, 
           description: taskDescription, 
           due_date: taskDueDate, 
-          column_id: selectedColumn.id, 
-          position: selectedColumn.tasks.length 
+          card_id: selectedCard.id, 
+          position: selectedCard.tasks.length 
         }]);
       if (error) throw error;
       setTaskTitle('');
       setTaskDescription('');
       setTaskDueDate('');
       setIsTaskModalVisible(false);
-      getColumns(boardId);
+      getCards(boardId);
     } catch (error) {
       Alert.alert('Error adding task', error.message);
     }
   }
 
-  async function deleteColumn(columnId) {
+  async function deleteCard(cardId) {
     try {
       const { error } = await supabase
-        .from('columns')
+        .from('cards')
         .delete()
-        .eq('id', columnId);
+        .eq('id', cardId);
       if (error) throw error;
-      getColumns(boardId);
+      getCards(boardId);
     } catch (error) {
-      Alert.alert('Error deleting column', error.message);
+      Alert.alert('Error deleting card', error.message);
     }
   }
 
-  const openEditModal = (column) => {
-    setEditingColumn(column);
-    setEditedColumnName(column.name);
+  const openEditModal = (card) => {
+    setEditingCard(card);
+    setEditedCardName(card.name);
+    setEditedCardDescription(card.description || '');
     setIsEditModalVisible(true);
   };
-
-  const openTaskModal = (column) => {
-    setSelectedColumn(column);
+  
+  const openTaskModal = (card) => {
+    setSelectedCard(card);
     setTaskTitle('');
     setTaskDescription('');
     setTaskDueDate('');
     setIsTaskModalVisible(true);
   };
 
-  const openAddColumnModal = () => {
-    setIsAddColumnModalVisible(true);
+  const openAddCardModal = () => {
+    setIsAddCardModalVisible(true);
   };
 
   return (
     <View style={styles.container}>
-      <TopBar title="Trello Board" onAddColumn={openAddColumnModal} />
+      <TopBar title="Trello Board" onAddCard={openAddCardModal} />
       
       <ScrollView horizontal={true} contentContainerStyle={styles.boardContainer} showsHorizontalScrollIndicator={false}>
-        {columns.map((column) => (
-          <View key={column.id} style={styles.columnWrapper}>
-            <Column 
-              column={column}
-              onEditColumn={openEditModal}
+        {cards.map((card) => (
+          <View key={card.id} style={styles.cardWrapper}>
+            <Card 
+              card={card}
+              onEditCard={openEditModal}
               onAddTask={openTaskModal}
             />
           </View>
         ))}
       </ScrollView>
 
-      <AddColumnModal 
-        visible={isAddColumnModalVisible}
-        onClose={() => setIsAddColumnModalVisible(false)}
-        onAddColumn={addColumn}
-        newColumnName={newColumnName}
-        setNewColumnName={setNewColumnName}
+      <AddCardModal 
+        visible={isAddCardModalVisible}
+        onClose={() => setIsAddCardModalVisible(false)}
+        onAddCard={addCard}
+        newCardName={newCardName}
+        setNewCardName={setNewCardName}
       />
       
       <AddTaskModal 
         visible={isTaskModalVisible}
         onClose={() => setIsTaskModalVisible(false)}
-        onAddTask={addTaskToColumn}
-        selectedColumn={selectedColumn}
+        onAddTask={addTaskToCard}
+        selectedCard={selectedCard}
         taskTitle={taskTitle}
         setTaskTitle={setTaskTitle}
         taskDescription={taskDescription}
@@ -339,13 +353,13 @@ export default function Columns() {
         setTaskDueDate={setTaskDueDate}
       />
 
-      <EditColumnModal 
+      <EditCardModal 
         visible={isEditModalVisible}
         onClose={() => setIsEditModalVisible(false)}
-        onUpdateColumn={updateColumn}
-        onDeleteColumn={() => deleteColumn(editingColumn.id)}
-        editedColumnName={editedColumnName}
-        setEditedColumnName={setEditedColumnName}
+        onUpdateCard={updateCard}
+        onDeleteCard={() => deleteCard(editingCard.id)}
+        editedCardName={editedCardName}
+        setEditedCardName={setEditedCardName}
       />
     </View>
   );
@@ -376,23 +390,23 @@ const styles = StyleSheet.create({
   boardContainer: {
     padding: 8,
   },
-  columnWrapper: {
+  cardWrapper: {
     marginRight: 8,
   },
-  column: {
+  card: {
     width: 272,
     backgroundColor: '#EBECF0',
     borderRadius: 3,
     padding: 8,
     maxHeight: '100%',
   },
-  columnHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  columnTitle: {
+  cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#172B4D',
