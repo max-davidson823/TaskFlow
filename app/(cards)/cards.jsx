@@ -84,49 +84,92 @@ const AddCardModal = ({ visible, onClose, onAddCard, newCardName, setNewCardName
   </Modal>
 );
 
-const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => (
-  <Modal
-    animationType="slide"
-    transparent={true}
-    visible={visible}
-    onRequestClose={onClose}
-  >
-    <View style={styles.centeredView}>
-      <View style={styles.modalView}>
-        <Text style={styles.modalTitle}>Add Task to {selectedCard?.name}</Text>
-        <TextInput
-          style={styles.modalInput}
-          value={taskTitle}
-          onChangeText={setTaskTitle}
-          placeholder="Task Title"
-        />
-        <TextInput
-          style={styles.modalInput}
-          value={taskDescription}
-          onChangeText={setTaskDescription}
-          placeholder="Task Description"
-        />
-        <TextInput
-          style={styles.modalInput}
-          value={taskDueDate}
-          onChangeText={setTaskDueDate}
-          placeholder="Due Date (YYYY-MM-DD)"
-        />
-        <View style={styles.modalButtons}>
-          <TouchableOpacity style={styles.button} onPress={onAddTask}>
-            <Text style={styles.buttonText}>Add Task</Text>
+const AddTaskModal = ({ visible, onClose, onAddTask, selectedCard, taskTitle, setTaskTitle, taskDescription, setTaskDescription, taskDueDate, setTaskDueDate }) => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const handleDateChange = (event, date) => {
+    if (date) {
+      setSelectedDate(date);
+      setShowDatePicker(false);
+      setShowTimePicker(true); // Show time picker after date is selected
+    } else {
+      setShowDatePicker(false);
+    }
+  };
+
+  const handleTimeChange = (event, time) => {
+    if (time) {
+      const finalDateTime = new Date(selectedDate);
+      finalDateTime.setHours(time.getHours());
+      finalDateTime.setMinutes(time.getMinutes());
+
+      const formattedDateTime = `${finalDateTime.getMonth() + 1}/${finalDateTime.getDate()}/${finalDateTime.getFullYear().toString().slice(-2)} ${finalDateTime.getHours()}:${finalDateTime.getMinutes().toString().padStart(2, '0')}`;
+      setTaskDueDate(formattedDateTime);
+    }
+    setShowTimePicker(false);
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.centeredView}>
+        <View style={styles.modalView}>
+          <Text style={styles.modalTitle}>Add Task to {selectedCard?.name}</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={taskTitle}
+            onChangeText={setTaskTitle}
+            placeholder="Task Title"
+          />
+          <TextInput
+            style={styles.modalInput}
+            value={taskDescription}
+            onChangeText={setTaskDescription}
+            placeholder="Task Description"
+          />
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateInput}>
+            <Text style={{ color: taskDueDate ? '#000' : '#888' }}>
+              {taskDueDate || 'Select Due Date & Time'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.buttonClose]}
-            onPress={onClose}
-          >
-            <Text style={styles.buttonText}>Cancel</Text>
-          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={new Date()}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+          {showTimePicker && (
+            <DateTimePicker
+              value={new Date()}
+              mode="time"
+              display="default"
+              onChange={handleTimeChange}
+            />
+          )}
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={styles.button} onPress={onAddTask}>
+              <Text style={styles.buttonText}>Add Task</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.buttonClose]}
+              onPress={onClose}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 const EditCardModal = ({ visible, onClose, onUpdateCard, onDeleteCard, editedCardName, setEditedCardName, editedCardDescription, setEditedCardDescription }) => (
   <Modal
@@ -534,5 +577,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#172B4D',
     textAlignVertical: 'top',
+  },
+  dateInput: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#DFE1E6',
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    width: '100%',
+    marginBottom: 16,
+    color: '#172B4D',
   },
 });
